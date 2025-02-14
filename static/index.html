@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Localhost</title>
+</head>
+<body>
+    <h1>Localhost</h1>
+    <p>This is a simple webpage created on your local machine.</p>
+    <script src="script.js"></script> <!-- Link to your JavaScript file -->
+
+    <!-- Your HTML code goes here -->
+
+    <script>
+        // Your JavaScript code goes here
+    </script> <!-- Place your JavaScript code inside this script tag -->
+
+    <p>This is a paragraph created dynamically using JavaScript.</p>
+    <p id="dynamicParagraph"></p>
+
+    <script>
+        // Create a paragraph element
+        const paragraph = document.createElement("p");
+        // Set its text content
+        paragraph.textContent = "This is a paragraph created dynamically using JavaScript.";
+        // Append the paragraph to the body element
+        document.body.appendChild(paragraph);
+    </script>
+
+    <p>This is a paragraph created dynamically using JavaScript and appended to the body element.</p>
+    
+</body>
+</html>
