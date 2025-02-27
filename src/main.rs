@@ -1,25 +1,14 @@
 mod server;
-mod handlers;
 mod http;
+mod handlers;
+mod utils;
 
-use server::config::Config;
-use server::listener::start_listening;
+use server::Server;
+use std::path::Path;
 
-fn main() {
-    // Charger la configuration depuis `config/server.conf`
-    let config_path = "config/server.conf";
-    let config = match Config::load(config_path) {
-        Ok(cfg) => {
-            println!("Configuration loaded: {:?}", cfg);
-            cfg
-        }
-        Err(e) => {
-            eprintln!("Failed to load configuration: {}", e);
-            return;
-        }
-    };
-
-    // Démarrer l'écoute sur les ports configurés
-    println!("Starting server...");
-    start_listening(config.host, config.ports);
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config_path = Path::new("config/server.conf");
+    let mut server = Server::new(config_path)?;
+    server.run()?;
+    Ok(())
 }

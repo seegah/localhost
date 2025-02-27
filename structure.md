@@ -1,4 +1,6 @@
 localhost/
+├── assets/
+│   └── header.txt            
 ├── src/
 │   ├── main.rs                      # Entrée principale de l'application
 │   ├── server/

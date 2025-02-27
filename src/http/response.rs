@@ -1,41 +1,34 @@
-use crate::http::headers::Headers;
+use crate::http::status::Status;
 
 pub struct Response {
-    pub status: u16,
-    pub body: String,
-    pub headers: Headers, // Ajout des en-têtes HTTP
+    pub status: Status,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
 }
 
 impl Response {
-    pub fn new(status: u16, body: String) -> Self {
-        let mut headers = Headers::new();
-        headers.set("Content-Length", &body.len().to_string());
-        headers.set("Content-Type", "text/html"); // Par défaut, texte HTML
-
+    pub fn new(status: Status) -> Self {
         Response {
             status,
-            body,
-            headers,
+            headers: vec![],
+            body: vec![],
         }
     }
 
-    pub fn to_string(&self) -> String {
-        format!(
-            "HTTP/1.1 {} {}\r\n{}\r\n\r\n{}",
-            self.status,
-            self.status_text(),
-            self.headers.to_string(),
-            self.body
-        )
-    }
-
-    fn status_text(&self) -> &str {
-        match self.status {
-            200 => "OK",
-            404 => "Not Found",
-            400 => "Bad Request",
-            500 => "Internal Server Error",
-            _ => "Unknown",
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut response = format!(
+            "HTTP/1.1 {} {}\r\n",
+            self.status.code(),
+            self.status.message()
+        );
+        
+        for (key, value) in &self.headers {
+            response.push_str(&format!("{}: {}\r\n", key, value));
         }
+        
+        response.push_str("\r\n");
+        let mut bytes = response.into_bytes();
+        bytes.extend(&self.body);
+        bytes
     }
 }

@@ -1,51 +1,51 @@
-use crate::http::{Request, Response};
-use crate::server::route::route_request;
-use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
-use std::thread;
+use libc::{socket, bind, listen, sockaddr_in, AF_INET, SOCK_STREAM, INADDR_ANY};
 
-pub fn start_listening(host: String, ports: Vec<u16>) {
-    for port in ports {
-        let address = format!("{}:{}", host, port);
-        match TcpListener::bind(&address) {
-            Ok(listener) => {
-                println!("Server listening on {}", address);
+pub struct Listener {
+    fd: i32,
+}
 
-                // Crée un thread pour chaque port
-                thread::spawn(move || {
-                    for stream in listener.incoming() {
-                        match stream {
-                            Ok(stream) => handle_connection(stream),
-                            Err(e) => eprintln!("Connection error: {}", e),
-                        }
-                    }
-                });
-            }
-            Err(e) => eprintln!("Failed to bind to {}: {}", address, e),
+impl Listener {
+    pub fn new(host: &str, port: u16) -> Result<Self, Box<dyn std::error::Error>> {
+        let fd = unsafe { socket(AF_INET, SOCK_STREAM, 0) };
+        if fd < 0 {
+            return Err("Failed to create socket".into());
         }
+
+        let addr = sockaddr_in {
+            sin_family: AF_INET as u16,
+            sin_port: port.to_be(),
+            sin_addr: if host == "127.0.0.1" { libc::in_addr { s_addr: INADDR_ANY } }  else { libc::in_addr { s_addr: 0 }}, // Simplified for localhost
+            sin_zero: [0; 8],
+        };
+
+        let result = unsafe {
+            bind(fd, &addr as *const _ as *const _, std::mem::size_of::<sockaddr_in>() as u32)
+        };
+        if result < 0 {
+            return Err("Failed to bind socket".into());
+        }
+
+        let result = unsafe { listen(fd, 128) };
+        if result < 0 {
+            return Err("Failed to listen on socket".into());
+        }
+
+        Ok(Listener { fd })
     }
 
-    // Empêche le programme principal de se terminer
-    loop {
-        std::thread::park();
+    pub fn fd(&self) -> i32 { self.fd }
+
+    pub fn accept(&self) -> Result<i32, Box<dyn std::error::Error>> {
+        let client_fd = unsafe { libc::accept(self.fd, std::ptr::null_mut(), std::ptr::null_mut()) };
+        if client_fd < 0 {
+            return Err("Failed to accept connection".into());
+        }
+        Ok(client_fd)
     }
 }
 
-fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 1024]; // Buffer pour lire les données de la requête
-    stream.read(&mut buffer).unwrap();
-
-    let raw_request = String::from_utf8_lossy(&buffer[..]); // Convertir les octets en chaîne
-    let request = Request::parse(&raw_request); // Analyser la requête HTTP
-
-    // Passe la requête au routeur pour obtenir une réponse
-    let response = match request {
-        Some(req) => route_request(req),
-        None => Response::new(404, "404 Not Found".to_string()),
-    };
-
-    // Écrire la réponse sur le flux de la connexion
-    stream.write_all(response.to_string().as_bytes()).unwrap();
-    stream.flush().unwrap();
-    println!("Responded to client with status {}", response.status);
+impl Drop for Listener {
+    fn drop(&mut self) {
+        unsafe { libc::close(self.fd) };
+    }
 }
